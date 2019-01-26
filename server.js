@@ -1,6 +1,7 @@
 //Dependencies
 var mysql = require("mysql");
 var inquirer = require("inquirer");
+var colors = require("colors");
 require("console.table");
 
 //Connect to DB
@@ -14,7 +15,9 @@ var connection = mysql.createConnection({
 
 connection.connect(function (err) {
     if (err) throw err;
-    console.log("SUCCESS!");
+    console.log(" ");
+    console.log('SUCCESS!'.green);
+    console.log(" ");
     makeTable();
 })
 
@@ -42,57 +45,69 @@ var selectItem = function (inventory) {
         if (product) {
             selectQuantity(product);
         } else {
-            console.log("Item Unavailable!");
+            console.log(" ");
+            console.log("Item Unavailable!".red.underline);
+            console.log(" ");
             makeTable();
         }
     })
 }
 
 //Select Quantity
-var selectQuantity = function () {
+var selectQuantity = function (product) {
     inquirer.prompt({
         type: "input",
-        name: "UserChoice",
+        name: "quantity",
         message: "How many would you like? [Quit with Q]",
         validate: function (value) {
             return !isNaN(value) || value.toLowerCase() === "q";
         }
     }).then(function (value) {
-        userExit(value.userChoice);
-        var choiceID = parseInt(value.userChoice);
-        var quantity = checkInventory(choiceID, inventory);
-        if (quantity > inventory) {
-            console.log("The demand exceeds the supply. Don't be greedy, select fewer items");
-        } else {
-            purchaseItem();
+        userExit(value.quantity);
+        var quantity = parseInt(value.quantity);
+        if (quantity > product.stock_quantity) {
+            console.log(" ");
+            console.log('The demand exceeds the supply. DO NOT be greedy, select fewer items'.rainbow);
+            console.log(" ");
             makeTable();
+        } else {
+            purchaseItem(product, quantity);
         }
-        
+
     })
-    // Inquirer prompt for quantity wanted
-    // Make sure to give quit option and validate (just like above)
-    // Check if should exit by calling the exit function
-    // if quantity desired is greater than stock quantity, print a message alerting the user.
-    // else call the purchaseItem function
+
 }
 
 //Purchase Item
-var purchaseItem = function () {
-    // Connect to mySQL and update the stock_quantity of the item purchased
-    // Console log a message the purchase was successful
-    // Call makeTable function
+var purchaseItem = function (product, quantity) {
+    connection.query("UPDATE products SET stock_quantity = stock_quantity - ? WHERE item_id = ?", [quantity, product.item_id], function (err, res) {
+        console.log(" ");
+        console.log('Congradulations on your purchase!'.bold.green);
+        console.log(" ");
+        makeTable();
+    })
+    
+
 }
 
 //Check Inventory
-var checkInventory = function () {
-    // Loop through all inventory
-    // if choiceID === item_id, return that inventory item
-    // otherwise return null
+var checkInventory = function (choiceID, inventory) {
+    for (var i = 0; i < inventory.length; i++) {
+        if (inventory[i].item_id === choiceID) {
+            return inventory[i];
+        }
+    }
+    return null;
+
 }
 
 //userExit
-var userExit = function () {
-    // If user enters "q" at any point, 
-    // console log a goodbye statement to the user
-    // Exit the process (using process.exit(0))
+var userExit = function (choice) {
+    if (choice.toLowerCase() === "q") {
+        console.log(" ");
+        console.log('Thank you for visiting. Please come back soon!'.underline.bgYellow.black);
+        console.log(" ");
+        process.exit(0);
+    }
+
 }
